@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diazepam Metabolism 3D Visualization</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f0f 100%);
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 18px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 320px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .label {
+            position: absolute;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 20px;
+            border: 2px solid;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 50;
+            transition: all 0.3s ease;
+        }
+
+        .label::after {
+            content: '';
+            position: absolute;
+            width: 2px;
+            background: currentColor;
+            opacity: 0.5;
+        }
+
+        #labelsContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        #infoPanel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            display: none;
+            transition: all 0.3s ease;
+        }
+
+        #infoPanel h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 20px;
+        }
+
+        #infoPanel .info-row {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        #infoPanel .info-label {
+            font-weight: bold;
+            color: #ccc;
+        }
+
+        #infoPanel .info-value {
+            color: white;
+            text-align: right;
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        #infoPanel .active-yes {
+            color: #4CAF50;
+        }
+
+        #infoPanel .active-no {
+            color: #ff6b6b;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+
+        button {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: scale(1.05) translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: linear-gradient(45deg, #666 0%, #888 100%);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="info">
+            <h3>Diazepam Metabolism</h3>
+            <p>Watch as diazepam (blue sphere) metabolizes into its three main metabolites through hepatic oxidation.
+            </p>
+            <div id="status">Ready to start...</div>
+        </div>
+        <div id="labelsContainer"></div>
+        <div id="infoPanel">
+            <h3 id="drugName">Select a compound</h3>
+            <div class="info-row">
+                <span class="info-label">Half-life:</span>
+                <span class="info-value" id="halfLife">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Active:</span>
+                <span class="info-value" id="isActive">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Metabolized by:</span>
+                <span class="info-value" id="enzymes">-</span>
+            </div>
+        </div>
+        <div id="instructions">
+            🖱️ Drag: Rotate • 🔍 Scroll: Zoom • 👆 Click: Drug Info
+        </div>
+        <div id="controls">
+            <button id="startBtn">Start Metabolism</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer, animationId, controls;
+        let diazepamSphere, metaboliteSpheres = [];
+        let labels = [];
+        let labelElements = [];
+        let isAnimating = false;
+        let connectionLines = [];
+        let connectionGlows = [];
+        let connectionParticles = [];
+        let metabolismArrows = [];
+        let parentRing = null;
+        let raycaster, mouse;
+        let hoveredObject = null;
+        let clickableObjects = [];
+
+        // Drug information database
+        const drugInfo = {
+            'Diazepam': {
+                halfLife: '20-100 hours',
+                active: true,
+                enzymes: 'CYP2C19, CYP3A4'
+            },
+            'Nordiazepam': {
+                halfLife: '50-120 hours',
+                active: true,
+                enzymes: 'CYP3A4'
+            },
+            'Temazepam': {
+                halfLife: '8-22 hours',
+                active: true,
+                enzymes: 'UGT2B7, UGT2B15'
+            },
+            'Oxazepam': {
+                halfLife: '6-25 hours',
+                active: true,
+                enzymes: 'UGT2B7, UGT2B15'
+            }
+        };
+
+        // Initialize the 3D scene
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+            scene.fog = new THREE.Fog(0x0a0a1a, 8, 50);
+
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 8);
+
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            // Add orbit controls (simplified version without external dependency)
+            setupSimpleControls();
+
+            // Initialize raycaster and mouse
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // Add lighting
+            setupLighting();
+
+            // Create diazepam sphere
+            createDiazepamSphere();
+
+            // Add stars background
+            createStarField();
+
+            // Start render loop
+            animate();
+
+            // Event listeners
+            document.getElementById('startBtn').addEventListener('click', startMetabolism);
+            document.getElementById('resetBtn').addEventListener('click', resetScene);
+            window.addEventListener('resize', onWindowResize);
+
+            // Mouse interaction listeners (separate from camera controls)
+            renderer.domElement.addEventListener('mousemove', onMouseMove, { passive: true });
+            renderer.domElement.addEventListener('click', onMouseClick);
+        }
+
+        function setupSimpleControls() {
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+            let spherical = new THREE.Spherical();
+            let rotateStart = new THREE.Vector2();
+            let rotateEnd = new THREE.Vector2();
+            let rotateDelta = new THREE.Vector2();
+
+            // Initialize spherical coordinates from current camera position
+            spherical.setFromVector3(camera.position);
+
+            const rotateSpeed = 0.5;
+            const zoomSpeed = 0.5;
+            const minDistance = 4;
+            const maxDistance = 25;
+            const minPolarAngle = 0;
+            const maxPolarAngle = Math.PI;
+
+            function onMouseDown(event) {
+                if (event.button === 0) { // Left mouse button
+                    isDragging = true;
+                    rotateStart.set(event.clientX, event.clientY);
+                    renderer.domElement.style.cursor = 'grabbing';
+                    event.preventDefault();
+                }
+            }
+
+            function onMouseMove(event) {
+                if (isDragging) {
+                    rotateEnd.set(event.clientX, event.clientY);
+                    rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(rotateSpeed);
+
+                    const element = renderer.domElement;
+
+                    // Rotate around Y axis (horizontal movement)
+                    spherical.theta -= 2 * Math.PI * rotateDelta.x / element.clientHeight;
+
+                    // Rotate around X axis (vertical movement)
+                    spherical.phi -= 2 * Math.PI * rotateDelta.y / element.clientHeight;
+
+                    // Restrict phi to be between desired limits
+                    spherical.phi = Math.max(minPolarAngle, Math.min(maxPolarAngle, spherical.phi));
+
+                    rotateStart.copy(rotateEnd);
+
+                    // Update camera position
+                    camera.position.setFromSpherical(spherical);
+                    camera.lookAt(0, 0, 0);
+
+                    event.preventDefault();
+                }
+            }
+
+            function onMouseUp(event) {
+                isDragging = false;
+                renderer.domElement.style.cursor = 'default';
+            }
+
+            function onWheel(event) {
+                event.preventDefault();
+
+                if (event.deltaY < 0) {
+                    spherical.radius *= (1 - zoomSpeed * 0.05);
+                } else {
+                    spherical.radius *= (1 + zoomSpeed * 0.05);
+                }
+
+                spherical.radius = Math.max(minDistance, Math.min(maxDistance, spherical.radius));
+
+                camera.position.setFromSpherical(spherical);
+                camera.lookAt(0, 0, 0);
+            }
+
+            function onContextMenu(event) {
+                event.preventDefault();
+            }
+
+            // Add event listeners
+            renderer.domElement.addEventListener('mousedown', onMouseDown);
+            renderer.domElement.addEventListener('mousemove', onMouseMove);
+            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            renderer.domElement.addEventListener('wheel', onWheel);
+            renderer.domElement.addEventListener('contextmenu', onContextMenu);
+
+            // Also handle mouse leave to stop dragging
+            renderer.domElement.addEventListener('mouseleave', onMouseUp);
+
+            // Store the isDragging state globally so we can check it in click handlers
+            window.getCameraState = () => ({ isDragging });
+        }
+
+        function onMouseMove(event) {
+            // Don't process hover effects while dragging
+            if (window.getCameraState && window.getCameraState().isDragging) {
+                return;
+            }
+
+            // Calculate mouse position in normalized device coordinates
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // Update raycaster
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects);
+
+            // Reset previous hover
+            if (hoveredObject) {
+                // Reset glow intensity and color
+                if (hoveredObject.glow) {
+                    hoveredObject.glow.material.uniforms.c.value = hoveredObject.originalGlowIntensity;
+                    // Reset glow color to original
+                    if (!hoveredObject.originalGlowColor) {
+                        hoveredObject.originalGlowColor = new THREE.Color(hoveredObject.material.color);
+                    }
+                    hoveredObject.glow.material.uniforms.glowColor.value = hoveredObject.originalGlowColor.clone();
+                }
+                // Reset scale
+                hoveredObject.scale.setScalar(1);
+                // Reset material emissive
+                if (hoveredObject.material.emissive) {
+                    hoveredObject.material.emissive = hoveredObject.originalEmissive;
+                }
+                // Reset label highlighting
+                const label = labelElements.find(l => l.targetObject === hoveredObject);
+                if (label && label.element) {
+                    label.element.style.transform = 'translate(-50%, -50%)';
+                    label.element.style.boxShadow = 'none';
+                }
+            }
+
+            // Handle new hover
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                if (object !== hoveredObject) {
+                    hoveredObject = object;
+                    
+                    // Enhance glow effect
+                    if (object.glow) {
+                        // Store enhanced values
+                        object.hoveredGlowIntensity = object.originalGlowIntensity * 2.5;
+                        object.hoveredGlowColor = new THREE.Color(object.material.color).multiplyScalar(1.5);
+                        
+                        // Apply enhanced values
+                        object.glow.material.uniforms.c.value = object.hoveredGlowIntensity;
+                        object.glow.material.uniforms.glowColor.value = object.hoveredGlowColor;
+                    }
+                    
+                    // Scale up the molecule slightly
+                    object.scale.setScalar(1.15);
+                    
+                    // Enhance material emissive
+                    if (!object.originalEmissive) {
+                        object.originalEmissive = object.material.emissive.clone();
+                    }
+                    object.material.emissive = new THREE.Color(object.material.color).multiplyScalar(0.3);
+                    
+                    // Highlight corresponding label
+                    const label = labelElements.find(l => l.targetObject === object);
+                    if (label && label.element) {
+                        label.element.style.transform = 'translate(-50%, -50%) scale(1.1)';
+                        label.element.style.boxShadow = `0 0 20px ${label.element.style.borderColor}`;
+                    }
+                    
+                    renderer.domElement.style.cursor = 'pointer';
+                }
+            } else {
+                hoveredObject = null;
+                renderer.domElement.style.cursor = 'default';
+            }
+        }
+
+        function onMouseClick(event) {
+            // Don't process clicks if we were dragging
+            if (window.getCameraState && window.getCameraState().isDragging) {
+                return;
+            }
+
+            // Add a small delay to ensure we're not in the middle of a drag
+            setTimeout(() => {
+                // Calculate mouse position
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+                // Update raycaster
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(clickableObjects);
+
+                if (intersects.length > 0) {
+                    const object = intersects[0].object;
+                    showDrugInfo(object.drugName);
+                } else {
+                    hideDrugInfo();
+                }
+            }, 10);
+        }
+
+        function showDrugInfo(drugName) {
+            const info = drugInfo[drugName];
+            if (!info) return;
+
+            document.getElementById('drugName').textContent = drugName;
+            document.getElementById('halfLife').textContent = info.halfLife;
+
+            const activeElement = document.getElementById('isActive');
+            activeElement.textContent = info.active ? 'Yes' : 'No';
+            activeElement.className = 'info-value ' + (info.active ? 'active-yes' : 'active-no');
+
+            document.getElementById('enzymes').textContent = info.enzymes;
+            document.getElementById('infoPanel').style.display = 'block';
+        }
+
+        function hideDrugInfo() {
+            document.getElementById('infoPanel').style.display = 'none';
+        }
+
+        function createMetabolismArrow(startPos, endPos, color) {
+            const direction = new THREE.Vector3().subVectors(endPos, startPos);
+            const length = direction.length();
+            const normalizedDirection = direction.normalize();
+
+            // Create arrow group
+            const arrowGroup = new THREE.Group();
+
+            // Arrow shaft (cylinder)
+            const shaftLength = length * 0.6;
+            const shaftRadius = 0.08;
+            const shaftGeometry = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLength, 8);
+            const shaftMaterial = new THREE.MeshPhongMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8,
+                emissive: new THREE.Color(color).multiplyScalar(0.1)
+            });
+            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
+
+            // Arrow head (cone)
+            const headLength = length * 0.2;
+            const headRadius = 0.15;
+            const headGeometry = new THREE.ConeGeometry(headRadius, headLength, 8);
+            const headMaterial = new THREE.MeshPhongMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.9,
+                emissive: new THREE.Color(color).multiplyScalar(0.2)
+            });
+            const head = new THREE.Mesh(headGeometry, headMaterial);
+
+            // Position shaft and head
+            shaft.position.set(0, 0, 0);
+            head.position.set(0, shaftLength / 2 + headLength / 2, 0);
+
+            // Add to group
+            arrowGroup.add(shaft);
+            arrowGroup.add(head);
+
+            // Position and orient the arrow
+            const midPoint = new THREE.Vector3().addVectors(startPos, endPos).multiplyScalar(0.5);
+            arrowGroup.position.copy(midPoint);
+
+            // Rotate to point in the right direction
+            const up = new THREE.Vector3(0, 1, 0);
+            const quaternion = new THREE.Quaternion().setFromUnitVectors(up, normalizedDirection);
+            arrowGroup.setRotationFromQuaternion(quaternion);
+
+            // Start invisible
+            arrowGroup.traverse(child => {
+                if (child.material) {
+                    child.material.opacity = 0;
+                }
+            });
+
+            return arrowGroup;
+        }
+
+        function animateArrowAppearance(arrow, delay = 0) {
+            setTimeout(() => {
+                const duration = 1500;
+                const startTime = Date.now();
+
+                function fadeIn() {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeProgress = 1 - Math.pow(1 - progress, 2);
+
+                    arrow.traverse(child => {
+                        if (child.material) {
+                            const targetOpacity = child.material.userData.originalOpacity ||
+                                (child.geometry.type === 'ConeGeometry' ? 0.9 : 0.8);
+                            child.material.userData.originalOpacity = targetOpacity;
+                            child.material.opacity = targetOpacity * easeProgress;
+                        }
+                    });
+
+                    // Add a gentle pulsing effect
+                    const pulse = Math.sin(elapsed * 0.005) * 0.1 + 1;
+                    arrow.scale.setScalar(pulse * easeProgress);
+
+                    if (progress < 1) {
+                        requestAnimationFrame(fadeIn);
+                    }
+                }
+
+                fadeIn();
+            }, delay);
+        }
+
+        function createParentRing(parentSphere) {
+            const ringRadius = 2.0; // Slightly larger than sphere
+            const tubeRadius = 0.08;
+
+            // Create torus geometry for the ring
+            const ringGeometry = new THREE.TorusGeometry(ringRadius, tubeRadius, 8, 32);
+
+            // Create glowing material
+            const ringMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4080ff,
+                emissive: 0x2040aa,
+                transparent: true,
+                opacity: 0.7,
+                shininess: 100
+            });
+
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(parentSphere.position);
+
+            // Create additional glow effect
+            const glowGeometry = new THREE.TorusGeometry(ringRadius, tubeRadius * 2, 8, 32);
+            const glowMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    c: { type: "f", value: 0.8 },
+                    p: { type: "f", value: 3.0 },
+                    glowColor: { type: "c", value: new THREE.Color(0x4080ff) },
+                },
+                vertexShader: `
+                    varying vec3 vNormal;
+                    void main() {
+                        vNormal = normalize(normalMatrix * normal);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform float c;
+                    uniform float p;
+                    uniform vec3 glowColor;
+                    varying vec3 vNormal;
+                    void main() {
+                        float intensity = pow(abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), p);
+                        gl_FragColor = vec4(glowColor, intensity * c);
+                    }
+                `,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true
+            });
+
+            const glowRing = new THREE.Mesh(glowGeometry, glowMaterial);
+            glowRing.position.copy(parentSphere.position);
+
+            // Group ring and glow
+            const ringGroup = new THREE.Group();
+            ringGroup.add(ring);
+            ringGroup.add(glowRing);
+
+            return ringGroup;
+        }
+
+        function createConnectionWithFlow(startPos, endPos, color) {
+            const points = [];
+            points.push(startPos.clone());
+            points.push(endPos.clone());
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+
+            // Main connection line
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: color,
+                linewidth: 2,
+                transparent: true,
+                opacity: 0
+            });
+
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+
+            // Glow line
+            const glowMaterial = new THREE.LineBasicMaterial({
+                color: color,
+                linewidth: 6,
+                transparent: true,
+                opacity: 0
+            });
+
+            const glowLine = new THREE.Line(lineGeometry.clone(), glowMaterial);
+            scene.add(glowLine);
+
+            // Create flow particles
+            const particles = [];
+            const particleCount = 5;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particleGeometry = new THREE.SphereGeometry(0.06, 8, 8);
+                const particleMaterial = new THREE.MeshPhongMaterial({
+                    color: color,
+                    emissive: new THREE.Color(color).multiplyScalar(0.3),
+                    transparent: true,
+                    opacity: 0
+                });
+
+                const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                particle.userData = {
+                    progress: i / particleCount, // Stagger particles along the path
+                    startPos: startPos.clone(),
+                    endPos: endPos.clone()
+                };
+
+                scene.add(particle);
+                particles.push(particle);
+            }
+
+            return { line, glow: glowLine, particles };
+        }
+
+        function setupLighting() {
+            // Ambient light (very soft)
+            const ambientLight = new THREE.AmbientLight(0x404060, 0.2);
+            scene.add(ambientLight);
+
+            // Main directional light
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(8, 8, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 0.5;
+            directionalLight.shadow.camera.far = 50;
+            scene.add(directionalLight);
+
+            // Rim lighting
+            const rimLight1 = new THREE.PointLight(0x4080ff, 1, 50);
+            rimLight1.position.set(-10, 5, 5);
+            scene.add(rimLight1);
+
+            const rimLight2 = new THREE.PointLight(0xff6040, 0.8, 50);
+            rimLight2.position.set(10, -5, -5);
+            scene.add(rimLight2);
+
+            // Soft fill light
+            const fillLight = new THREE.HemisphereLight(0x4040ff, 0x202020, 0.3);
+            scene.add(fillLight);
+        }
+
+        function createMolecularMaterial(color, size = 1) {
+            const material = new THREE.MeshPhongMaterial({
+                color: color,
+                shininess: 100,
+                transparent: true,
+                opacity: 0.85,
+                emissive: new THREE.Color(0x000000),
+                emissiveIntensity: 1
+            });
+
+            return material;
+        }
+
+        function createGlowEffect(sphere, color, intensity = 1) {
+            // Create glow geometry (slightly larger)
+            const glowGeometry = new THREE.SphereGeometry(sphere.geometry.parameters.radius * 1.3, 32, 32);
+            const glowMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    c: { type: "f", value: intensity },
+                    p: { type: "f", value: 1.4 },
+                    glowColor: { type: "c", value: new THREE.Color(color) },
+                    viewVector: { type: "v3", value: new THREE.Vector3() }
+                },
+                vertexShader: `
+                    uniform vec3 viewVector;
+                    varying float intensity;
+                    varying vec3 vNormal;
+                    varying vec3 vPositionNormal;
+                    void main() {
+                        vNormal = normalize( normalMatrix * normal );
+                        vPositionNormal = normalize(( modelViewMatrix * vec4(position, 1.0) ).xyz);
+                        gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                        
+                        // Calculate fresnel for rim lighting
+                        vec3 vViewPosition = cameraPosition - (modelMatrix * vec4(position, 1.0)).xyz;
+                        vec3 vViewDir = normalize(vViewPosition);
+                        vec3 vWorldNormal = normalize(mat3(modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz) * normal);
+                        
+                        // Fresnel effect - glow is stronger at edges
+                        float fresnelTerm = 1.0 - max(dot(vViewDir, vWorldNormal), 0.0);
+                        intensity = pow(fresnelTerm, 2.0);
+                    }
+                `,
+                fragmentShader: `
+                    uniform vec3 glowColor;
+                    uniform float c;
+                    uniform float p;
+                    varying float intensity;
+                    varying vec3 vNormal;
+                    varying vec3 vPositionNormal;
+                    void main() {
+                        // Enhanced fresnel effect
+                        float fresnel = pow(1.0 - dot(vNormal, vPositionNormal), p);
+                        
+                        // Combine with vertex intensity for smoother effect
+                        float finalIntensity = fresnel * intensity * c;
+                        
+                        vec3 glow = glowColor * finalIntensity;
+                        gl_FragColor = vec4( glow, finalIntensity * 0.9 );
+                    }
+                `,
+                side: THREE.BackSide,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                depthWrite: false
+            });
+
+            const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+            glowMesh.position.copy(sphere.position);
+            
+            // Add update function to keep view vector current
+            glowMesh.userData.updateViewVector = function() {
+                glowMaterial.uniforms.viewVector.value = camera.position.clone();
+            };
+            
+            scene.add(glowMesh);
+
+            return glowMesh;
+        }
+
+        function createDiazepamSphere() {
+            const geometry = new THREE.SphereGeometry(1.2, 64, 64);
+            const material = createMolecularMaterial(0x2196F3);
+
+            diazepamSphere = new THREE.Mesh(geometry, material);
+            diazepamSphere.position.set(0, 0, 0);
+            diazepamSphere.castShadow = true;
+            diazepamSphere.receiveShadow = true;
+            diazepamSphere.drugName = 'Diazepam';
+            scene.add(diazepamSphere);
+
+            // Add to clickable objects
+            clickableObjects.push(diazepamSphere);
+
+            // Add glow effect
+            diazepamSphere.glow = createGlowEffect(diazepamSphere, 0x2196F3, 0.8);
+            diazepamSphere.originalGlowColor = new THREE.Color(0x2196F3);
+            diazepamSphere.originalGlowIntensity = 0.8;
+
+            // Add parent compound ring to distinguish it
+            parentRing = createParentRing(diazepamSphere);
+            scene.add(parentRing);
+
+            // Add label
+            const label = createLabel('Diazepam', diazepamSphere.position, 0x2196F3);
+            label.targetObject = diazepamSphere;
+            label.element.style.display = 'block';
+        }
+
+        function createStarField() {
+            const starGeometry = new THREE.BufferGeometry();
+            const starCount = 2000;
+            const positions = new Float32Array(starCount * 3);
+            const colors = new Float32Array(starCount * 3);
+
+            for (let i = 0; i < starCount; i++) {
+                positions[i * 3] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 1] = (Math.random() - 0.5) * 200;
+                positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+
+                const color = new THREE.Color();
+                color.setHSL(Math.random() * 0.3 + 0.5, 0.5, Math.random() * 0.5 + 0.5);
+                colors[i * 3] = color.r;
+                colors[i * 3 + 1] = color.g;
+                colors[i * 3 + 2] = color.b;
+            }
+
+            starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const starMaterial = new THREE.PointsMaterial({
+                size: 1.5,
+                vertexColors: true,
+                transparent: true,
+                opacity: 0.8
+            });
+            const stars = new THREE.Points(starGeometry, starMaterial);
+            scene.add(stars);
+        }
+
+        function createLabel(text, position, color = 0xffffff) {
+            // Create HTML label element
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label';
+            labelDiv.textContent = text;
+            labelDiv.style.borderColor = `#${color.toString(16).padStart(6, '0')}`;
+            labelDiv.style.display = 'none';
+
+            // Add to labels container
+            document.getElementById('labelsContainer').appendChild(labelDiv);
+
+            // Store reference with 3D object
+            const labelData = {
+                element: labelDiv,
+                text: text,
+                targetObject: null,
+                offset: new THREE.Vector3(0, 0, 0),
+                color: color
+            };
+
+            labelElements.push(labelData);
+            return labelData;
+        }
+
+        function updateLabels() {
+            const labelsToPosition = [];
+
+            // Project 3D positions to screen space
+            labelElements.forEach((labelData, index) => {
+                if (!labelData.targetObject || !labelData.element) return;
+
+                // Get world position of target object
+                const worldPos = new THREE.Vector3();
+                labelData.targetObject.getWorldPosition(worldPos);
+
+                // Project to screen space
+                const screenPos = worldPos.clone().project(camera);
+
+                // Convert to pixel coordinates
+                const x = (screenPos.x + 1) * window.innerWidth / 2;
+                const y = (-screenPos.y + 1) * window.innerHeight / 2;
+
+                // Check if object is visible
+                const isVisible = screenPos.z < 1;
+
+                if (isVisible) {
+                    labelsToPosition.push({
+                        data: labelData,
+                        targetX: x,
+                        targetY: y,
+                        index: index
+                    });
+                    labelData.element.style.display = 'block';
+                } else {
+                    labelData.element.style.display = 'none';
+                }
+            });
+
+            // Position labels with basic positioning
+            labelsToPosition.forEach(item => {
+                const label = item.data.element;
+                label.style.left = `${item.targetX}px`;
+                label.style.top = `${item.targetY - 50}px`;
+                label.style.transform = 'translate(-50%, -50%)';
+            });
+        }
+
+        function startMetabolism() {
+            if (isAnimating) return;
+
+            isAnimating = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('status').textContent = 'Metabolism in progress...';
+
+            // Start with diazepam fade
+            setTimeout(() => {
+                shrinkDiazepam();
+            }, 500);
+
+            // Create metabolites
+            setTimeout(() => {
+                createMetabolites();
+            }, 3000);
+
+            // Complete animation
+            setTimeout(() => {
+                completeAnimation();
+            }, 8000);
+        }
+
+        function shrinkDiazepam() {
+            const duration = 2500;
+            const startTime = Date.now();
+
+            function shrinkAnimation() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Keep scale at 1, only fade opacity
+                diazepamSphere.scale.setScalar(1);
+
+                if (diazepamSphere.glow) {
+                    diazepamSphere.glow.scale.setScalar(1);
+                }
+
+                // Fade opacity
+                diazepamSphere.material.opacity = 0.85 * (1 - progress * 0.4);
+
+                if (progress < 1) {
+                    requestAnimationFrame(shrinkAnimation);
+                }
+            }
+
+            shrinkAnimation();
+        }
+
+        function createMetabolites() {
+            const metabolites = [
+                { name: 'Nordiazepam', position: new THREE.Vector3(-4.5, 1.5, 0), color: 0xFF5722 },
+                { name: 'Temazepam', position: new THREE.Vector3(4.5, 1.5, 0), color: 0x4CAF50 },
+                { name: 'Oxazepam', position: new THREE.Vector3(0, -3.5, 0), color: 0xFF9800 }
+            ];
+
+            metabolites.forEach((metabolite, index) => {
+                setTimeout(() => {
+                    const geometry = new THREE.SphereGeometry(1.2, 64, 64);
+                    const material = createMolecularMaterial(metabolite.color);
+
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.copy(diazepamSphere.position);
+                    sphere.scale.setScalar(1);
+                    sphere.material.opacity = 0;
+                    sphere.castShadow = true;
+                    sphere.receiveShadow = true;
+                    sphere.drugName = metabolite.name;
+                    scene.add(sphere);
+
+                    // Add glow effect
+                    sphere.glow = createGlowEffect(sphere, metabolite.color, 0.6);
+                    sphere.glow.scale.setScalar(1);
+                    sphere.originalGlowColor = new THREE.Color(metabolite.color);
+                    sphere.originalGlowIntensity = 0.6;
+
+                    metaboliteSpheres.push(sphere);
+
+                    // Animate to final position
+                    animateMetaboliteEmergence(sphere, metabolite.position, metabolite.name);
+                }, index * 600);
+            });
+        }
+
+        function animateMetaboliteEmergence(sphere, targetPosition, name) {
+            const startPosition = diazepamSphere.position.clone();
+            const duration = 2000;
+            const startTime = Date.now();
+
+            function emergenceAnimation() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 2);
+
+                // Keep scale at 1
+                sphere.scale.setScalar(1);
+
+                // Fade in
+                sphere.material.opacity = progress * 0.85;
+
+                // Move to final position
+                sphere.position.lerpVectors(startPosition, targetPosition, easeProgress);
+
+                // Update glow
+                if (sphere.glow) {
+                    sphere.glow.position.copy(sphere.position);
+                    sphere.glow.scale.setScalar(1);
+                }
+
+                if (progress < 1) {
+                    requestAnimationFrame(emergenceAnimation);
+                } else {
+                    // Create label and add to clickable objects
+                    const label = createLabel(name, sphere.position, sphere.material.color.getHex());
+                    label.targetObject = sphere;
+                    clickableObjects.push(sphere);
+
+                    // Create connection with directional flow
+                    const connection = createConnectionWithFlow(startPosition, sphere.position, sphere.material.color.getHex());
+                    connectionLines.push(connection.line);
+                    connectionGlows.push(connection.glow);
+                    connectionParticles.push(connection.particles);
+
+                    // Animate connection appearance
+                    setTimeout(() => {
+                        connection.line.material.opacity = 0.6;
+                        connection.glow.material.opacity = 0.3;
+
+                        // Start particle flow animation
+                        connection.particles.forEach(particle => {
+                            particle.material.opacity = 0.8;
+                        });
+                    }, 800);
+                }
+            }
+
+            emergenceAnimation();
+        }
+
+        function completeAnimation() {
+            isAnimating = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('status').textContent = 'Metabolism complete! Click spheres for info.';
+        }
+
+        function resetScene() {
+            // Hide info panel
+            hideDrugInfo();
+
+            // Remove metabolites
+            metaboliteSpheres.forEach(sphere => {
+                const index = clickableObjects.indexOf(sphere);
+                if (index > -1) {
+                    clickableObjects.splice(index, 1);
+                }
+                scene.remove(sphere);
+                if (sphere.glow) scene.remove(sphere.glow);
+            });
+            metaboliteSpheres = [];
+
+            // Remove connection lines
+            connectionLines.forEach(line => {
+                scene.remove(line);
+            });
+            connectionLines = [];
+
+            connectionGlows.forEach(glow => {
+                scene.remove(glow);
+            });
+            connectionGlows = [];
+
+            // Remove connection particles
+            connectionParticles.forEach(particleGroup => {
+                particleGroup.forEach(particle => {
+                    scene.remove(particle);
+                });
+            });
+            connectionParticles = [];
+
+            // Remove metabolism arrows
+            metabolismArrows.forEach(arrow => {
+                scene.remove(arrow);
+            });
+            metabolismArrows = [];
+
+            // Remove HTML labels except the first one
+            for (let i = labelElements.length - 1; i > 0; i--) {
+                if (labelElements[i].element) {
+                    labelElements[i].element.remove();
+                }
+                labelElements.splice(i, 1);
+            }
+
+            // Reset diazepam sphere
+            diazepamSphere.scale.setScalar(1);
+            diazepamSphere.material.opacity = 0.85;
+
+            if (diazepamSphere.glow) {
+                diazepamSphere.glow.scale.setScalar(1);
+            }
+
+            // Reset parent ring
+            if (parentRing) {
+                parentRing.scale.setScalar(1);
+                parentRing.rotation.set(0, 0, 0);
+                parentRing.position.copy(diazepamSphere.position);
+            }
+
+            // Reset UI
+            isAnimating = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('status').textContent = 'Ready to start...';
+        }
+
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+
+            // Update view vectors for all glow effects
+            if (diazepamSphere && diazepamSphere.glow && diazepamSphere.glow.userData.updateViewVector) {
+                diazepamSphere.glow.userData.updateViewVector();
+            }
+            
+            metaboliteSpheres.forEach(sphere => {
+                if (sphere && sphere.glow && sphere.glow.userData.updateViewVector) {
+                    sphere.glow.userData.updateViewVector();
+                }
+            });
+
+            // Gentle floating animation
+            const time = Date.now() * 0.001;
+
+            if (diazepamSphere) {
+                // Only update position if not hovered
+                if (diazepamSphere !== hoveredObject) {
+                    diazepamSphere.position.y = Math.sin(time * 0.5) * 0.3;
+                }
+                diazepamSphere.rotation.x += 0.008;
+                diazepamSphere.rotation.y += 0.012;
+
+                if (diazepamSphere.glow) {
+                    diazepamSphere.glow.position.copy(diazepamSphere.position);
+                    diazepamSphere.glow.rotation.copy(diazepamSphere.rotation);
+                    
+                    // Maintain hover state for glow
+                    if (diazepamSphere === hoveredObject) {
+                        diazepamSphere.glow.scale.setScalar(1.15);
+                        // Maintain enhanced glow values
+                        if (diazepamSphere.hoveredGlowIntensity) {
+                            diazepamSphere.glow.material.uniforms.c.value = diazepamSphere.hoveredGlowIntensity;
+                            diazepamSphere.glow.material.uniforms.glowColor.value = diazepamSphere.hoveredGlowColor;
+                        }
+                    } else {
+                        diazepamSphere.glow.scale.setScalar(1);
+                    }
+                }
+            }
+
+            metaboliteSpheres.forEach((sphere, index) => {
+                if (sphere) {
+                    // Only update position if not hovered
+                    if (sphere !== hoveredObject) {
+                        sphere.position.y += Math.sin(time * 0.7 + index * 2) * 0.003;
+                    }
+                    sphere.rotation.x += 0.01 + index * 0.002;
+                    sphere.rotation.y += 0.015 - index * 0.003;
+
+                    if (sphere.glow) {
+                        sphere.glow.position.copy(sphere.position);
+                        sphere.glow.rotation.copy(sphere.rotation);
+                        
+                        // Maintain hover state for glow
+                        if (sphere === hoveredObject) {
+                            sphere.glow.scale.setScalar(1.15);
+                            // Maintain enhanced glow values
+                            if (sphere.hoveredGlowIntensity) {
+                                sphere.glow.material.uniforms.c.value = sphere.hoveredGlowIntensity;
+                                sphere.glow.material.uniforms.glowColor.value = sphere.hoveredGlowColor;
+                            }
+                        } else {
+                            sphere.glow.scale.setScalar(1);
+                        }
+                    }
+                }
+            });
+
+            // Animate parent ring rotation and pulsing
+            if (parentRing) {
+                parentRing.rotation.z += 0.01; // Slow rotation
+                const ringPulse = Math.sin(time * 2) * 0.1 + 1;
+                parentRing.scale.setScalar(ringPulse);
+
+                // Update ring position to follow diazepam sphere
+                parentRing.position.copy(diazepamSphere.position);
+            }
+
+            // Animate connection flow particles
+            connectionParticles.forEach((particleGroup, groupIndex) => {
+                particleGroup.forEach((particle, particleIndex) => {
+                    if (particle.material.opacity > 0) {
+                        const flowSpeed = 0.8;
+                        const loopDuration = 4; // Time for complete loop in seconds
+                        const globalProgress = (time * flowSpeed + particleIndex * 0.4) % loopDuration / loopDuration;
+
+                        // Interpolate position along the path
+                        particle.position.lerpVectors(
+                            particle.userData.startPos,
+                            particle.userData.endPos,
+                            globalProgress
+                        );
+
+                        // Fade particles near the ends for smooth cycling
+                        const fadeZone = 0.2;
+                        let alpha = 1;
+                        if (globalProgress < fadeZone) {
+                            alpha = globalProgress / fadeZone;
+                        } else if (globalProgress > 1 - fadeZone) {
+                            alpha = (1 - globalProgress) / fadeZone;
+                        }
+
+                        particle.material.opacity = 0.8 * alpha;
+
+                        // Add subtle pulsing
+                        const pulse = Math.sin(time * 3 + particleIndex * Math.PI * 0.5) * 0.2 + 1;
+                        particle.scale.setScalar(pulse);
+                    }
+                });
+            });
+
+            // Update HTML labels
+            updateLabels();
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateLabels();
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+
+</html>
