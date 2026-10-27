@@ -168,6 +168,43 @@
             margin-top: 0;
             color: #667eea;
         }
+
+        #info { font-size: 14px; max-width: 290px; max-height: calc(100vh - 180px); overflow-y: auto; }
+        #info p, #infoPanel p { line-height: 1.5; }
+        #info h3 { font-size: 20px; margin-bottom: 12px; }
+        #status { color: #b9c9ff; line-height: 1.5; margin: 12px 0; }
+        #info label { display: block; margin: 12px 0 6px; }
+        #compoundSelect { width: 100%; box-sizing: border-box; background: #182035; color: white; border: 1px solid #667eea; border-radius: 6px; padding: 10px; font: inherit; }
+        details { margin-top: 14px; }
+        summary { cursor: pointer; color: #bdcaff; line-height: 1.5; }
+        li { margin-bottom: 10px; line-height: 1.5; }
+        ol, ul { padding-left: 22px; }
+        a { color: #aecbff; }
+        a:focus-visible, button:focus-visible, select:focus-visible, summary:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+        .small-note { color: #bdc3d1; font-size: 12px; }
+        .source-list { font-size: 12px; }
+        #infoPanel { width: 310px; max-height: calc(100vh - 145px); overflow-y: auto; font-size: 14px; }
+        #infoPanel h3 { padding-right: 20px; }
+        #infoPanel h4 { margin: 16px 0 4px; color: #b9c9ff; }
+        #infoPanel .info-row { flex-direction: column; gap: 6px; }
+        #infoPanel .info-value { margin: 0; text-align: left; }
+        #closeInfo { position: absolute; top: 8px; right: 8px; padding: 4px 10px; margin: 0; font-size: 24px; background: none; box-shadow: none; }
+        .label { width: max-content; max-width: 230px; white-space: pre-line; text-align: center; font-size: 14px; padding: 6px 10px; transition: none; }
+        .reaction-label { font-size: 11px; font-weight: normal; border-width: 1px; border-radius: 6px; padding: 4px 7px; color: #e1e5ef; }
+        #controls { white-space: nowrap; }
+        #instructions { font-size: 12px; }
+        @media (max-width: 1100px) {
+            #info { top: 10px; left: 10px; right: 10px; max-width: none; padding: 12px; max-height: 24vh; font-size: 12px; }
+            #info h3 { font-size: 17px; margin-bottom: 6px; }
+            #info p { margin: 6px 0; }
+            #info > p { display: none; }
+            #status { margin: 6px 0; }
+            #infoPanel { top: auto; bottom: 80px; right: 10px; left: 10px; width: auto; max-height: 52vh; padding: 16px; }
+            .label { font-size: 11px; padding: 4px 6px; }
+            .reaction-label { display: none !important; }
+            #instructions { display: none; }
+            button { padding: 12px 18px; font-size: 14px; margin: 0 5px; }
+        }
     </style>
 </head>
 
@@ -175,79 +212,361 @@
     <div id="container">
         <div id="info">
             <h3>Diazepam Metabolism</h3>
-            <p>Watch as diazepam (blue sphere) metabolizes into its three main metabolites through hepatic oxidation.
-            </p>
-            <div id="status">Ready to start...</div>
+            <p>Two initial routes form nordiazepam and temazepam. Both can lead to oxazepam. Conjugation produces inactive glucuronides for urinary excretion.</p>
+            <p class="small-note">Schematic pathways: timing, sphere size and particle flow do not encode reaction rates or concentrations.</p>
+            <div id="status" role="status" aria-live="polite">Ready to explore the pathways</div>
+            <label for="compoundSelect">Explore a compound</label>
+            <select id="compoundSelect"><option value="">Select a compound…</option></select>
+            <details id="pathwayDetails">
+                <summary>Pathways, teaching notes &amp; sources</summary>
+                <ol id="pathwayList"></ol>
+                <p>Phase I oxidation forms active metabolites. Phase II glucuronidation (UGTs) forms inactive conjugates, followed by urinary excretion. Temazepam mainly undergoes direct conjugation.</p>
+                <p>*CYP3A4 is supported by human enzyme studies for both steps leading to oxazepam; other CYP contributions have been reported. Enzyme labels are not exhaustive.</p>
+                <p>Half-lives describe plasma elimination and do not specify duration of sedation. Values after direct temazepam or oxazepam dosing do not predict their time course when formed from diazepam. Age, hepatic function, genotype and interacting drugs can affect disposition.</p>
+                <p>Steps are revealed in sequence for teaching; pathways can operate concurrently in vivo. Timing, sphere size and particle flow do not encode reaction rates or concentrations. Spheres represent compounds, not molecular structures or one molecule splitting into several products.</p>
+                <ul id="sourceList" class="source-list"></ul>
+                <p class="small-note">Pharmacology reviewed October 26, 2026.</p>
+            </details>
         </div>
-        <div id="labelsContainer"></div>
-        <div id="infoPanel">
+        <div id="labelsContainer" aria-hidden="true"></div>
+        <section id="infoPanel" aria-labelledby="drugName">
+            <button id="closeInfo" aria-label="Close compound information">×</button>
             <h3 id="drugName">Select a compound</h3>
             <div class="info-row">
-                <span class="info-label">Half-life:</span>
-                <span class="info-value" id="halfLife">-</span>
+                <span class="info-label">Elimination half-life</span>
+                <span class="info-value" id="halfLife">—</span>
             </div>
+            <p id="halfLifeNote" class="small-note"></p>
             <div class="info-row">
-                <span class="info-label">Active:</span>
-                <span class="info-value" id="isActive">-</span>
+                <span class="info-label">Pharmacologically active</span>
+                <span class="info-value" id="isActive">—</span>
             </div>
-            <div class="info-row">
-                <span class="info-label">Metabolized by:</span>
-                <span class="info-value" id="enzymes">-</span>
-            </div>
-        </div>
+            <h4>Formation</h4>
+            <p id="formation"></p>
+            <h4>Further metabolism / excretion</h4>
+            <p id="elimination"></p>
+            <p id="clinicalNote" class="small-note"></p>
+            <p id="enzymeNote" class="small-note"></p>
+            <p class="small-note">*Human enzyme-study evidence; CYP contributions are not exclusive.</p>
+            <details><summary>References for this compound</summary><ul id="drugSources" class="source-list"></ul></details>
+        </section>
         <div id="instructions">
-            🖱️ Drag: Rotate • 🔍 Scroll: Zoom • 👆 Click: Drug Info
+            Drag: Rotate • Scroll: Zoom • Click: Compound info
         </div>
         <div id="controls">
-            <button id="startBtn">Start Metabolism</button>
+            <button id="startBtn">Start pathways</button>
             <button id="resetBtn">Reset</button>
         </div>
     </div>
 
+    <script id="pharmacologyData" type="application/json">
+{
+  "reviewed": "2026-10-26",
+  "sources": {
+    "fda2023": {
+      "label": "FDA Valium prescribing information (2023), Clinical Pharmacology",
+      "url": "https://www.accessdata.fda.gov/drugsatfda_docs/label/2023/013263Orig1s100lbl.pdf"
+    },
+    "valium": {
+      "label": "Valium labeling (2026), §12.3 Pharmacokinetics",
+      "url": "https://dailymed.nlm.nih.gov/dailymed/drugInfo.cfm?setid=260e2041-2bb3-482f-850e-b5d47a7bdbe6"
+    },
+    "temazepam": {
+      "label": "Temazepam labeling (2025), Clinical Pharmacology",
+      "url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=bbb6e233-dc6b-43a7-8203-d91421d89921"
+    },
+    "oxazepam": {
+      "label": "Oxazepam labeling (2025), Clinical Pharmacology",
+      "url": "https://dailymed.nlm.nih.gov/dailymed/lookup.cfm?setid=67f821fa-5663-4d69-82c9-5ee13a09f324"
+    },
+    "cyp": {
+      "label": "Ono et al. (1996): human CYP enzyme studies",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/8948091/"
+    },
+    "oxaUgt": {
+      "label": "Court et al. (2002): oxazepam UGT stereoselectivity",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/12386133/"
+    },
+    "temaUgt": {
+      "label": "Bardhi et al. (2025): temazepam UGT enzyme studies",
+      "url": "https://pubmed.ncbi.nlm.nih.gov/40543327/"
+    }
+  },
+  "compounds": {
+    "Diazepam": {
+      "position": [
+        0,
+        5.2,
+        0
+      ],
+      "color": "#2196F3",
+      "stage": 0,
+      "active": true,
+      "halfLife": "Up to 48 hours (label-reported terminal half-life)",
+      "halfLifeNote": "This is not a maximum for every patient: age and hepatic impairment can markedly prolong elimination. CYP inhibition or induction can alter exposure.",
+      "note": "Parent drug. Oxidation produces active metabolites; repeated dosing can lead to accumulation.",
+      "sources": [
+        "fda2023",
+        "valium"
+      ]
+    },
+    "Nordiazepam": {
+      "position": [
+        -4.2,
+        1.2,
+        0
+      ],
+      "color": "#FF5722",
+      "stage": 1,
+      "active": true,
+      "halfLife": "Up to 100 hours (label-reported terminal half-life)",
+      "halfLifeNote": "Also called nordazepam or N-desmethyldiazepam. This long-lived active metabolite contributes to accumulation during repeated diazepam dosing.",
+      "note": "Further 3-hydroxylation produces oxazepam. CYP3A4 has the highest activity in the cited human enzyme study; other CYP contributions are reported.",
+      "sources": [
+        "fda2023",
+        "valium",
+        "cyp"
+      ]
+    },
+    "Temazepam": {
+      "position": [
+        4.2,
+        1.2,
+        0
+      ],
+      "color": "#4CAF50",
+      "stage": 1,
+      "active": true,
+      "halfLife": "3.5–18.4 hours; mean 8.8 hours",
+      "halfLifeNote": "Terminal half-life reported after temazepam administration; values depend on the study population and method.",
+      "note": "Direct glucuronidation predominates. Conversion to oxazepam is a minor route. Temazepam labeling reports no active metabolites in its cited ADME study and a minor N-desmethyl conjugate; the oxazepam pathway is documented in diazepam labeling.",
+      "enzymeNote": "UGTs catalyze conjugation, not formation of temazepam from diazepam. Human in vitro studies implicate UGT2B7/UGT1A9 for R-temazepam and UGT1A6/UGT2B15 for S-temazepam; their exact in vivo shares are not established.",
+      "sources": [
+        "fda2023",
+        "temazepam",
+        "cyp",
+        "temaUgt"
+      ]
+    },
+    "Oxazepam": {
+      "position": [
+        -2.8,
+        -2.5,
+        0
+      ],
+      "color": "#FF9800",
+      "stage": 2,
+      "active": true,
+      "halfLife": "5.7–10.9 hours; mean approximately 8.2 hours",
+      "halfLifeNote": "Elimination half-life from the label’s single-dose study in 12 volunteers. This study range is not a universal clinical range; elimination can be longer in very old adults.",
+      "note": "Formed downstream of nordiazepam or temazepam. Further glucuronidation produces an inactive conjugate for urinary excretion.",
+      "enzymeNote": "Human enzyme studies identify UGT2B15 for S-oxazepam and UGT2B7/UGT1A9 for R-oxazepam conjugation. These are elimination enzymes, not the CYP enzymes that form oxazepam.",
+      "sources": [
+        "fda2023",
+        "oxazepam",
+        "cyp",
+        "oxaUgt"
+      ]
+    },
+    "Temazepam glucuronide": {
+      "position": [
+        4.8,
+        -4.6,
+        0
+      ],
+      "color": "#B0BEC5",
+      "stage": 2,
+      "active": false,
+      "label": "Temazepam glucuronide\nInactive → urine",
+      "halfLife": "Not displayed for this conjugate",
+      "halfLifeNote": "The parent compound’s half-life does not describe its conjugate.",
+      "note": "An inactive conjugation product. Direct glucuronidation is the principal elimination route for temazepam.",
+      "excretion": "Urinary excretion of the inactive conjugate.",
+      "sources": [
+        "temazepam",
+        "temaUgt"
+      ]
+    },
+    "Oxazepam glucuronide": {
+      "position": [
+        -2.8,
+        -6.5,
+        0
+      ],
+      "color": "#90A4AE",
+      "stage": 3,
+      "active": false,
+      "label": "Oxazepam glucuronide\nInactive → urine",
+      "halfLife": "Not displayed for this conjugate",
+      "halfLifeNote": "The parent compound’s half-life does not describe its conjugate.",
+      "note": "The major inactive metabolite of oxazepam.",
+      "excretion": "Urinary excretion of the inactive conjugate.",
+      "sources": [
+        "oxazepam",
+        "oxaUgt"
+      ]
+    }
+  },
+  "pathways": [
+    {
+      "from": "Diazepam",
+      "to": "Nordiazepam",
+      "reaction": "N-demethylation",
+      "enzyme": "CYP2C19 + CYP3A4",
+      "phase": "I",
+      "sources": [
+        "fda2023"
+      ],
+      "labelOffset": [
+        -12,
+        -4
+      ]
+    },
+    {
+      "from": "Diazepam",
+      "to": "Temazepam",
+      "reaction": "3-hydroxylation",
+      "enzyme": "CYP3A4",
+      "phase": "I",
+      "sources": [
+        "fda2023"
+      ],
+      "labelOffset": [
+        12,
+        -4
+      ]
+    },
+    {
+      "from": "Nordiazepam",
+      "to": "Oxazepam",
+      "reaction": "3-hydroxylation",
+      "enzyme": "CYP3A4*",
+      "phase": "I",
+      "sources": [
+        "fda2023",
+        "cyp"
+      ],
+      "labelOffset": [
+        -50,
+        0
+      ]
+    },
+    {
+      "from": "Temazepam",
+      "to": "Oxazepam",
+      "reaction": "N-demethylation (minor route)",
+      "enzyme": "CYP3A4*",
+      "phase": "I",
+      "minor": true,
+      "sources": [
+        "fda2023",
+        "temazepam",
+        "cyp"
+      ],
+      "labelOffset": [
+        0,
+        -4
+      ]
+    },
+    {
+      "from": "Temazepam",
+      "to": "Temazepam glucuronide",
+      "reaction": "Glucuronidation (major route)",
+      "enzyme": "UGTs",
+      "phase": "II",
+      "sources": [
+        "temazepam",
+        "temaUgt"
+      ],
+      "labelOffset": [
+        60,
+        0
+      ]
+    },
+    {
+      "from": "Oxazepam",
+      "to": "Oxazepam glucuronide",
+      "reaction": "Glucuronidation",
+      "enzyme": "UGTs",
+      "phase": "II",
+      "sources": [
+        "oxazepam",
+        "oxaUgt"
+      ],
+      "labelOffset": [
+        -60,
+        0
+      ]
+    }
+  ]
+}
+    </script>
     <script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
-    <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script>
         // Global variables
         let scene, camera, renderer, animationId, controls;
         let diazepamSphere, metaboliteSpheres = [];
-        let labels = [];
         let labelElements = [];
         let isAnimating = false;
-        let connectionLines = [];
-        let connectionGlows = [];
-        let connectionParticles = [];
-        let metabolismArrows = [];
         let parentRing = null;
         let raycaster, mouse;
         let hoveredObject = null;
         let clickableObjects = [];
 
-        // Drug information database
-        const drugInfo = {
-            'Diazepam': {
-                halfLife: '20-100 hours',
-                active: true,
-                enzymes: 'CYP2C19, CYP3A4'
-            },
-            'Nordiazepam': {
-                halfLife: '50-120 hours',
-                active: true,
-                enzymes: 'CYP3A4'
-            },
-            'Temazepam': {
-                halfLife: '8-22 hours',
-                active: true,
-                enzymes: 'UGT2B7, UGT2B15'
-            },
-            'Oxazepam': {
-                halfLife: '6-25 hours',
-                active: true,
-                enzymes: 'UGT2B7, UGT2B15'
-            }
-        };
+        // One source of truth for the scene, accessible pathway list and info panels.
+        const { compounds: drugInfo, pathways, sources } = JSON.parse(
+            document.getElementById('pharmacologyData').textContent
+        );
+        const nodes = new Map();
+        let connections = [];
+        let animationStart = 0;
+        let currentStage = 0;
+        const STAGE_DURATION = 2500; // Presentation timing only; no pharmacokinetic model.
+
+        function addSourceLinks(container, sourceIds) {
+            container.replaceChildren();
+            sourceIds.forEach(id => {
+                const li = document.createElement('li');
+                const link = document.createElement('a');
+                link.href = sources[id].url;
+                link.textContent = sources[id].label;
+                link.target = '_blank';
+                link.rel = 'noopener noreferrer';
+                li.appendChild(link);
+                container.appendChild(li);
+            });
+        }
+
+        function setupEducation() {
+            const select = document.getElementById('compoundSelect');
+            Object.keys(drugInfo).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+            select.addEventListener('change', () => select.value ? showDrugInfo(select.value) : hideDrugInfo());
+            document.getElementById('closeInfo').addEventListener('click', hideDrugInfo);
+            document.addEventListener('keydown', event => {
+                if (event.key === 'Escape') hideDrugInfo();
+            });
+            pathways.forEach(path => {
+                const item = document.createElement('li');
+                item.textContent = `${path.from} → ${path.to}: ${path.reaction}; ${path.enzyme}.`;
+                document.getElementById('pathwayList').appendChild(item);
+            });
+            addSourceLinks(document.getElementById('sourceList'), Object.keys(sources));
+        }
 
         // Initialize the 3D scene
         function init() {
+            setupEducation();
+            if (typeof THREE === 'undefined') {
+                document.getElementById('status').textContent = '3D library unavailable. Explore the pathway list and compound selector.';
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('resetBtn').disabled = true;
+                return;
+            }
             // Create scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x0a0a1a);
@@ -255,16 +574,24 @@
 
             // Create camera
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 8);
+            camera.position.set(0, 0, initialCameraDistance());
 
             // Create renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            try {
+                renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            } catch (error) {
+                document.getElementById('status').textContent = 'WebGL unavailable. Explore the pathway list and compound selector.';
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('resetBtn').disabled = true;
+                return;
+            }
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.2;
             document.getElementById('container').appendChild(renderer.domElement);
+            renderer.domElement.style.touchAction = 'none';
 
             // Add orbit controls (simplified version without external dependency)
             setupSimpleControls();
@@ -291,13 +618,14 @@
             window.addEventListener('resize', onWindowResize);
 
             // Mouse interaction listeners (separate from camera controls)
-            renderer.domElement.addEventListener('mousemove', onMouseMove, { passive: true });
+            renderer.domElement.addEventListener('pointermove', onMouseMove, { passive: true });
             renderer.domElement.addEventListener('click', onMouseClick);
         }
 
         function setupSimpleControls() {
             let isDragging = false;
-            let previousMousePosition = { x: 0, y: 0 };
+            let didDrag = false;
+            let dragDistance = 0;
             let spherical = new THREE.Spherical();
             let rotateStart = new THREE.Vector2();
             let rotateEnd = new THREE.Vector2();
@@ -309,14 +637,17 @@
             const rotateSpeed = 0.5;
             const zoomSpeed = 0.5;
             const minDistance = 4;
-            const maxDistance = 25;
+            const maxDistance = 45;
             const minPolarAngle = 0;
             const maxPolarAngle = Math.PI;
 
             function onMouseDown(event) {
                 if (event.button === 0) { // Left mouse button
                     isDragging = true;
+                    didDrag = false;
+                    dragDistance = 0;
                     rotateStart.set(event.clientX, event.clientY);
+                    renderer.domElement.setPointerCapture(event.pointerId);
                     renderer.domElement.style.cursor = 'grabbing';
                     event.preventDefault();
                 }
@@ -326,6 +657,8 @@
                 if (isDragging) {
                     rotateEnd.set(event.clientX, event.clientY);
                     rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(rotateSpeed);
+                    dragDistance += rotateDelta.length() / rotateSpeed;
+                    didDrag = dragDistance > 4;
 
                     const element = renderer.domElement;
 
@@ -373,20 +706,24 @@
             }
 
             // Add event listeners
-            renderer.domElement.addEventListener('mousedown', onMouseDown);
-            renderer.domElement.addEventListener('mousemove', onMouseMove);
-            renderer.domElement.addEventListener('mouseup', onMouseUp);
+            renderer.domElement.addEventListener('pointerdown', onMouseDown);
+            renderer.domElement.addEventListener('pointermove', onMouseMove);
+            renderer.domElement.addEventListener('pointerup', onMouseUp);
+            renderer.domElement.addEventListener('pointercancel', onMouseUp);
             renderer.domElement.addEventListener('wheel', onWheel);
             renderer.domElement.addEventListener('contextmenu', onContextMenu);
 
-            // Also handle mouse leave to stop dragging
-            renderer.domElement.addEventListener('mouseleave', onMouseUp);
-
             // Store the isDragging state globally so we can check it in click handlers
-            window.getCameraState = () => ({ isDragging });
+            window.getCameraState = () => ({ isDragging, didDrag });
+            controls = { fit: () => {
+                spherical.radius = initialCameraDistance();
+                camera.position.setFromSpherical(spherical);
+                camera.lookAt(0, 0, 0);
+            } };
         }
 
         function onMouseMove(event) {
+            if (event.pointerType === 'touch') return;
             // Don't process hover effects while dragging
             if (window.getCameraState && window.getCameraState().isDragging) {
                 return;
@@ -400,6 +737,7 @@
             // Update raycaster
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(clickableObjects);
+            if (intersects[0] && intersects[0].object === hoveredObject) return;
 
             // Reset previous hover
             if (hoveredObject) {
@@ -469,138 +807,45 @@
 
         function onMouseClick(event) {
             // Don't process clicks if we were dragging
-            if (window.getCameraState && window.getCameraState().isDragging) {
+            if (window.getCameraState && (window.getCameraState().isDragging || window.getCameraState().didDrag)) {
                 return;
             }
-
-            // Add a small delay to ensure we're not in the middle of a drag
-            setTimeout(() => {
-                // Calculate mouse position
-                const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-
-                // Update raycaster
-                raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(clickableObjects);
-
-                if (intersects.length > 0) {
-                    const object = intersects[0].object;
-                    showDrugInfo(object.drugName);
-                } else {
-                    hideDrugInfo();
-                }
-            }, 10);
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(clickableObjects);
+            if (intersects.length > 0) showDrugInfo(intersects[0].object.drugName);
+            else hideDrugInfo();
         }
 
         function showDrugInfo(drugName) {
             const info = drugInfo[drugName];
             if (!info) return;
-
+            document.getElementById('compoundSelect').value = drugName;
             document.getElementById('drugName').textContent = drugName;
             document.getElementById('halfLife').textContent = info.halfLife;
-
+            document.getElementById('halfLifeNote').textContent = info.halfLifeNote;
             const activeElement = document.getElementById('isActive');
-            activeElement.textContent = info.active ? 'Yes' : 'No';
+            activeElement.textContent = info.active ? 'Yes' : 'No — inactive conjugate';
             activeElement.className = 'info-value ' + (info.active ? 'active-yes' : 'active-no');
-
-            document.getElementById('enzymes').textContent = info.enzymes;
-            document.getElementById('infoPanel').style.display = 'block';
+            const describe = (path, incoming) =>
+                `${incoming ? path.from + ' → ' : '→ '}${incoming ? drugName : path.to}: ${path.reaction} (${path.enzyme}).`;
+            document.getElementById('formation').textContent = pathways
+                .filter(path => path.to === drugName).map(path => describe(path, true)).join(' ') || 'Administered parent drug.';
+            document.getElementById('elimination').textContent = info.excretion || pathways
+                .filter(path => path.from === drugName).map(path => describe(path, false)).join(' ');
+            document.getElementById('clinicalNote').textContent = info.note;
+            document.getElementById('enzymeNote').textContent = info.enzymeNote || '';
+            addSourceLinks(document.getElementById('drugSources'), info.sources);
+            const panel = document.getElementById('infoPanel');
+            panel.style.display = 'block';
+            panel.scrollTop = 0;
         }
 
         function hideDrugInfo() {
             document.getElementById('infoPanel').style.display = 'none';
-        }
-
-        function createMetabolismArrow(startPos, endPos, color) {
-            const direction = new THREE.Vector3().subVectors(endPos, startPos);
-            const length = direction.length();
-            const normalizedDirection = direction.normalize();
-
-            // Create arrow group
-            const arrowGroup = new THREE.Group();
-
-            // Arrow shaft (cylinder)
-            const shaftLength = length * 0.6;
-            const shaftRadius = 0.08;
-            const shaftGeometry = new THREE.CylinderGeometry(shaftRadius, shaftRadius, shaftLength, 8);
-            const shaftMaterial = new THREE.MeshPhongMaterial({
-                color: color,
-                transparent: true,
-                opacity: 0.8,
-                emissive: new THREE.Color(color).multiplyScalar(0.1)
-            });
-            const shaft = new THREE.Mesh(shaftGeometry, shaftMaterial);
-
-            // Arrow head (cone)
-            const headLength = length * 0.2;
-            const headRadius = 0.15;
-            const headGeometry = new THREE.ConeGeometry(headRadius, headLength, 8);
-            const headMaterial = new THREE.MeshPhongMaterial({
-                color: color,
-                transparent: true,
-                opacity: 0.9,
-                emissive: new THREE.Color(color).multiplyScalar(0.2)
-            });
-            const head = new THREE.Mesh(headGeometry, headMaterial);
-
-            // Position shaft and head
-            shaft.position.set(0, 0, 0);
-            head.position.set(0, shaftLength / 2 + headLength / 2, 0);
-
-            // Add to group
-            arrowGroup.add(shaft);
-            arrowGroup.add(head);
-
-            // Position and orient the arrow
-            const midPoint = new THREE.Vector3().addVectors(startPos, endPos).multiplyScalar(0.5);
-            arrowGroup.position.copy(midPoint);
-
-            // Rotate to point in the right direction
-            const up = new THREE.Vector3(0, 1, 0);
-            const quaternion = new THREE.Quaternion().setFromUnitVectors(up, normalizedDirection);
-            arrowGroup.setRotationFromQuaternion(quaternion);
-
-            // Start invisible
-            arrowGroup.traverse(child => {
-                if (child.material) {
-                    child.material.opacity = 0;
-                }
-            });
-
-            return arrowGroup;
-        }
-
-        function animateArrowAppearance(arrow, delay = 0) {
-            setTimeout(() => {
-                const duration = 1500;
-                const startTime = Date.now();
-
-                function fadeIn() {
-                    const elapsed = Date.now() - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    const easeProgress = 1 - Math.pow(1 - progress, 2);
-
-                    arrow.traverse(child => {
-                        if (child.material) {
-                            const targetOpacity = child.material.userData.originalOpacity ||
-                                (child.geometry.type === 'ConeGeometry' ? 0.9 : 0.8);
-                            child.material.userData.originalOpacity = targetOpacity;
-                            child.material.opacity = targetOpacity * easeProgress;
-                        }
-                    });
-
-                    // Add a gentle pulsing effect
-                    const pulse = Math.sin(elapsed * 0.005) * 0.1 + 1;
-                    arrow.scale.setScalar(pulse * easeProgress);
-
-                    if (progress < 1) {
-                        requestAnimationFrame(fadeIn);
-                    }
-                }
-
-                fadeIn();
-            }, delay);
+            document.getElementById('compoundSelect').value = '';
         }
 
         function createParentRing(parentSphere) {
@@ -620,7 +865,7 @@
             });
 
             const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.position.copy(parentSphere.position);
+
 
             // Create additional glow effect
             const glowGeometry = new THREE.TorusGeometry(ringRadius, tubeRadius * 2, 8, 32);
@@ -653,12 +898,13 @@
             });
 
             const glowRing = new THREE.Mesh(glowGeometry, glowMaterial);
-            glowRing.position.copy(parentSphere.position);
+
 
             // Group ring and glow
             const ringGroup = new THREE.Group();
             ringGroup.add(ring);
             ringGroup.add(glowRing);
+            ringGroup.position.copy(parentSphere.position);
 
             return ringGroup;
         }
@@ -832,7 +1078,9 @@
             const material = createMolecularMaterial(0x2196F3);
 
             diazepamSphere = new THREE.Mesh(geometry, material);
-            diazepamSphere.position.set(0, 0, 0);
+            diazepamSphere.position.fromArray(drugInfo.Diazepam.position);
+            diazepamSphere.userData.basePosition = diazepamSphere.position.clone();
+            nodes.set('Diazepam', diazepamSphere);
             diazepamSphere.castShadow = true;
             diazepamSphere.receiveShadow = true;
             diazepamSphere.drugName = 'Diazepam';
@@ -912,260 +1160,191 @@
         }
 
         function updateLabels() {
-            const labelsToPosition = [];
-
-            // Project 3D positions to screen space
-            labelElements.forEach((labelData, index) => {
+            labelElements.forEach(labelData => {
                 if (!labelData.targetObject || !labelData.element) return;
-
-                // Get world position of target object
-                const worldPos = new THREE.Vector3();
-                labelData.targetObject.getWorldPosition(worldPos);
-
-                // Project to screen space
-                const screenPos = worldPos.clone().project(camera);
-
-                // Convert to pixel coordinates
-                const x = (screenPos.x + 1) * window.innerWidth / 2;
-                const y = (-screenPos.y + 1) * window.innerHeight / 2;
-
-                // Check if object is visible
-                const isVisible = screenPos.z < 1;
-
-                if (isVisible) {
-                    labelsToPosition.push({
-                        data: labelData,
-                        targetX: x,
-                        targetY: y,
-                        index: index
-                    });
-                    labelData.element.style.display = 'block';
-                } else {
+                const target = labelData.targetObject;
+                if (!target.visible) {
                     labelData.element.style.display = 'none';
+                    return;
                 }
-            });
-
-            // Position labels with basic positioning
-            labelsToPosition.forEach(item => {
-                const label = item.data.element;
-                label.style.left = `${item.targetX}px`;
-                label.style.top = `${item.targetY - 50}px`;
-                label.style.transform = 'translate(-50%, -50%)';
+                const screenPos = target.getWorldPosition(new THREE.Vector3()).project(camera);
+                const visible = screenPos.z > -1 && screenPos.z < 1 && Math.abs(screenPos.x) < 1 && Math.abs(screenPos.y) < 1;
+                labelData.element.style.display = visible ? 'block' : 'none';
+                if (!visible) return;
+                const offset = labelData.screenOffset || [0, window.innerWidth <= 1100 ? -34 : -48];
+                const halfWidth = labelData.element.offsetWidth / 2;
+                const x = (screenPos.x + 1) * window.innerWidth / 2 + offset[0];
+                labelData.element.style.left = `${Math.max(halfWidth + 8, Math.min(window.innerWidth - halfWidth - 8, x))}px`;
+                labelData.element.style.top = `${(-screenPos.y + 1) * window.innerHeight / 2 + offset[1]}px`;
+                labelData.element.style.transform = 'translate(-50%, -50%)';
             });
         }
 
         function startMetabolism() {
-            if (isAnimating) return;
-
+            if (isAnimating || !renderer) return;
+            resetScene(); // Replays create exactly one copy of each node and edge.
+            createMetabolites();
             isAnimating = true;
+            animationStart = performance.now();
             document.getElementById('startBtn').disabled = true;
-            document.getElementById('status').textContent = 'Metabolism in progress...';
-
-            // Start with diazepam fade
-            setTimeout(() => {
-                shrinkDiazepam();
-            }, 500);
-
-            // Create metabolites
-            setTimeout(() => {
-                createMetabolites();
-            }, 3000);
-
-            // Complete animation
-            setTimeout(() => {
-                completeAnimation();
-            }, 8000);
-        }
-
-        function shrinkDiazepam() {
-            const duration = 2500;
-            const startTime = Date.now();
-
-            function shrinkAnimation() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                // Keep scale at 1, only fade opacity
-                diazepamSphere.scale.setScalar(1);
-
-                if (diazepamSphere.glow) {
-                    diazepamSphere.glow.scale.setScalar(1);
-                }
-
-                // Fade opacity
-                diazepamSphere.material.opacity = 0.85 * (1 - progress * 0.4);
-
-                if (progress < 1) {
-                    requestAnimationFrame(shrinkAnimation);
-                }
-            }
-
-            shrinkAnimation();
+            updateMetabolism(animationStart);
         }
 
         function createMetabolites() {
-            const metabolites = [
-                { name: 'Nordiazepam', position: new THREE.Vector3(-4.5, 1.5, 0), color: 0xFF5722 },
-                { name: 'Temazepam', position: new THREE.Vector3(4.5, 1.5, 0), color: 0x4CAF50 },
-                { name: 'Oxazepam', position: new THREE.Vector3(0, -3.5, 0), color: 0xFF9800 }
-            ];
-
-            metabolites.forEach((metabolite, index) => {
-                setTimeout(() => {
-                    const geometry = new THREE.SphereGeometry(1.2, 64, 64);
-                    const material = createMolecularMaterial(metabolite.color);
-
-                    const sphere = new THREE.Mesh(geometry, material);
-                    sphere.position.copy(diazepamSphere.position);
-                    sphere.scale.setScalar(1);
-                    sphere.material.opacity = 0;
-                    sphere.castShadow = true;
-                    sphere.receiveShadow = true;
-                    sphere.drugName = metabolite.name;
-                    scene.add(sphere);
-
-                    // Add glow effect
-                    sphere.glow = createGlowEffect(sphere, metabolite.color, 0.6);
-                    sphere.glow.scale.setScalar(1);
-                    sphere.originalGlowColor = new THREE.Color(metabolite.color);
-                    sphere.originalGlowIntensity = 0.6;
-
-                    metaboliteSpheres.push(sphere);
-
-                    // Animate to final position
-                    animateMetaboliteEmergence(sphere, metabolite.position, metabolite.name);
-                }, index * 600);
+            Object.entries(drugInfo).filter(([, info]) => info.stage > 0).forEach(([name, info]) => {
+                const color = new THREE.Color(info.color).getHex();
+                const geometry = new THREE.SphereGeometry(info.active ? 1.2 : 0.85, 64, 64);
+                const sphere = new THREE.Mesh(geometry, createMolecularMaterial(color));
+                sphere.position.fromArray(info.position);
+                sphere.userData.basePosition = sphere.position.clone();
+                sphere.userData.stage = info.stage;
+                sphere.drugName = name;
+                sphere.visible = false;
+                sphere.material.opacity = 0;
+                sphere.castShadow = true;
+                sphere.receiveShadow = true;
+                scene.add(sphere);
+                sphere.glow = createGlowEffect(sphere, color, 0.6);
+                sphere.glow.visible = false;
+                sphere.originalGlowColor = new THREE.Color(color);
+                sphere.originalGlowIntensity = 0.6;
+                metaboliteSpheres.push(sphere);
+                nodes.set(name, sphere);
+                const label = createLabel(info.label || name, sphere.position, color);
+                label.targetObject = sphere;
+            });
+            pathways.forEach(path => {
+                const source = nodes.get(path.from);
+                const target = nodes.get(path.to);
+                const color = path.phase === 'II' ? 0xB0BEC5 : target.material.color.getHex();
+                const connection = createConnectionWithFlow(source.position, target.position, color);
+                connection.source = source;
+                connection.target = target;
+                connection.path = path;
+                connection.opacity = 0;
+                // A fixed arrowhead preserves direction when animation is paused or captured.
+                connection.arrow = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), source.position, 1, color, 0.35, 0.2);
+                connection.arrow.line.visible = false;
+                connection.arrow.cone.material.transparent = true;
+                connection.arrow.visible = false;
+                scene.add(connection.arrow);
+                connection.anchor = new THREE.Object3D();
+                connection.anchor.visible = false;
+                scene.add(connection.anchor);
+                const label = createLabel(`${path.reaction}\n${path.enzyme}`, source.position, color);
+                label.element.classList.add('reaction-label');
+                label.targetObject = connection.anchor;
+                label.screenOffset = path.labelOffset;
+                connections.push(connection);
             });
         }
 
-        function animateMetaboliteEmergence(sphere, targetPosition, name) {
-            const startPosition = diazepamSphere.position.clone();
-            const duration = 2000;
-            const startTime = Date.now();
-
-            function emergenceAnimation() {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeProgress = 1 - Math.pow(1 - progress, 2);
-
-                // Keep scale at 1
-                sphere.scale.setScalar(1);
-
-                // Fade in
-                sphere.material.opacity = progress * 0.85;
-
-                // Move to final position
-                sphere.position.lerpVectors(startPosition, targetPosition, easeProgress);
-
-                // Update glow
-                if (sphere.glow) {
-                    sphere.glow.position.copy(sphere.position);
-                    sphere.glow.scale.setScalar(1);
-                }
-
-                if (progress < 1) {
-                    requestAnimationFrame(emergenceAnimation);
-                } else {
-                    // Create label and add to clickable objects
-                    const label = createLabel(name, sphere.position, sphere.material.color.getHex());
-                    label.targetObject = sphere;
-                    clickableObjects.push(sphere);
-
-                    // Create connection with directional flow
-                    const connection = createConnectionWithFlow(startPosition, sphere.position, sphere.material.color.getHex());
-                    connectionLines.push(connection.line);
-                    connectionGlows.push(connection.glow);
-                    connectionParticles.push(connection.particles);
-
-                    // Animate connection appearance
-                    setTimeout(() => {
-                        connection.line.material.opacity = 0.6;
-                        connection.glow.material.opacity = 0.3;
-
-                        // Start particle flow animation
-                        connection.particles.forEach(particle => {
-                            particle.material.opacity = 0.8;
-                        });
-                    }, 800);
-                }
+        function updateMetabolism(now) {
+            if (!isAnimating) return;
+            const elapsed = now - animationStart;
+            const stage = Math.min(3, Math.floor(elapsed / STAGE_DURATION) + 1);
+            if (stage !== currentStage) {
+                currentStage = stage;
+                document.getElementById('status').textContent = [
+                    '', '1 • Diazepam → nordiazepam or temazepam',
+                    '2 • Oxazepam formation; direct temazepam conjugation',
+                    '3 • Oxazepam conjugation → urinary excretion'
+                ][stage];
             }
-
-            emergenceAnimation();
+            metaboliteSpheres.forEach(sphere => {
+                const progress = Math.max(0, Math.min(1, (elapsed - (sphere.userData.stage - 1) * STAGE_DURATION) / 1200));
+                sphere.visible = progress > 0;
+                sphere.glow.visible = sphere.visible;
+                sphere.material.opacity = progress * 0.85;
+                if (sphere.visible && !clickableObjects.includes(sphere)) clickableObjects.push(sphere);
+            });
+            connections.forEach(connection => {
+                connection.opacity = Math.max(0, Math.min(1,
+                    (elapsed - (connection.target.userData.stage - 1) * STAGE_DURATION - 800) / 1000));
+            });
+            if (elapsed >= 3 * STAGE_DURATION) {
+                isAnimating = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('startBtn').textContent = 'Replay pathways';
+                document.getElementById('status').textContent = 'Pathways shown • select a compound to explore';
+            }
         }
 
-        function completeAnimation() {
-            isAnimating = false;
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('status').textContent = 'Metabolism complete! Click spheres for info.';
+        function updateConnections(time) {
+            connections.forEach(connection => {
+                const { source, target, line, glow, particles, arrow, anchor, path } = connection;
+                const direction = new THREE.Vector3().subVectors(target.position, source.position).normalize();
+                const start = source.position.clone().addScaledVector(direction, source.geometry.parameters.radius);
+                const end = target.position.clone().addScaledVector(direction, -target.geometry.parameters.radius - 0.15);
+                [line, glow].forEach(object => {
+                    const position = object.geometry.attributes.position;
+                    position.setXYZ(0, start.x, start.y, start.z);
+                    position.setXYZ(1, end.x, end.y, end.z);
+                    position.needsUpdate = true;
+                    object.geometry.computeBoundingSphere();
+                });
+                line.material.opacity = connection.opacity * (path.minor ? 0.35 : 0.6);
+                glow.material.opacity = connection.opacity * 0.2;
+                arrow.visible = connection.opacity > 0;
+                arrow.position.copy(start);
+                arrow.setDirection(direction);
+                arrow.setLength(start.distanceTo(end), 0.35, 0.2);
+                arrow.cone.material.opacity = connection.opacity * 0.9;
+                anchor.visible = connection.opacity > 0.1;
+                anchor.position.lerpVectors(start, end, 0.5);
+                particles.forEach((particle, index) => {
+                    const progress = (time * 0.2 + index / particles.length) % 1;
+                    particle.position.lerpVectors(start, end, progress);
+                    particle.material.opacity = connection.opacity * Math.sin(Math.PI * progress) * 0.8;
+                });
+            });
+        }
+
+        function disposeObject(object) {
+            object.traverse(child => {
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) {
+                    const materials = Array.isArray(child.material) ? child.material : [child.material];
+                    materials.forEach(material => material.dispose());
+                }
+            });
+            scene.remove(object);
         }
 
         function resetScene() {
-            // Hide info panel
+            // The presentation is driven by the main render loop, with no pending stage timers.
+            isAnimating = false;
+            currentStage = 0;
             hideDrugInfo();
-
-            // Remove metabolites
+            if (hoveredObject) {
+                hoveredObject.scale.setScalar(1);
+                if (hoveredObject.originalEmissive) hoveredObject.material.emissive.copy(hoveredObject.originalEmissive);
+                hoveredObject.glow.material.uniforms.c.value = hoveredObject.originalGlowIntensity;
+                hoveredObject.glow.material.uniforms.glowColor.value.copy(hoveredObject.originalGlowColor);
+            }
+            hoveredObject = null;
+            renderer.domElement.style.cursor = 'default';
             metaboliteSpheres.forEach(sphere => {
-                const index = clickableObjects.indexOf(sphere);
-                if (index > -1) {
-                    clickableObjects.splice(index, 1);
-                }
-                scene.remove(sphere);
-                if (sphere.glow) scene.remove(sphere.glow);
+                disposeObject(sphere.glow);
+                disposeObject(sphere);
             });
             metaboliteSpheres = [];
-
-            // Remove connection lines
-            connectionLines.forEach(line => {
-                scene.remove(line);
+            connections.forEach(connection => {
+                [connection.line, connection.glow, ...connection.particles, connection.arrow, connection.anchor].forEach(disposeObject);
             });
-            connectionLines = [];
-
-            connectionGlows.forEach(glow => {
-                scene.remove(glow);
-            });
-            connectionGlows = [];
-
-            // Remove connection particles
-            connectionParticles.forEach(particleGroup => {
-                particleGroup.forEach(particle => {
-                    scene.remove(particle);
-                });
-            });
-            connectionParticles = [];
-
-            // Remove metabolism arrows
-            metabolismArrows.forEach(arrow => {
-                scene.remove(arrow);
-            });
-            metabolismArrows = [];
-
-            // Remove HTML labels except the first one
-            for (let i = labelElements.length - 1; i > 0; i--) {
-                if (labelElements[i].element) {
-                    labelElements[i].element.remove();
-                }
-                labelElements.splice(i, 1);
-            }
-
-            // Reset diazepam sphere
-            diazepamSphere.scale.setScalar(1);
+            connections = [];
+            clickableObjects = [diazepamSphere];
+            nodes.clear();
+            nodes.set('Diazepam', diazepamSphere);
+            labelElements.splice(1).forEach(label => label.element.remove());
             diazepamSphere.material.opacity = 0.85;
-
-            if (diazepamSphere.glow) {
-                diazepamSphere.glow.scale.setScalar(1);
-            }
-
-            // Reset parent ring
-            if (parentRing) {
-                parentRing.scale.setScalar(1);
-                parentRing.rotation.set(0, 0, 0);
-                parentRing.position.copy(diazepamSphere.position);
-            }
-
-            // Reset UI
-            isAnimating = false;
             document.getElementById('startBtn').disabled = false;
-            document.getElementById('status').textContent = 'Ready to start...';
+            document.getElementById('startBtn').textContent = 'Start pathways';
+            document.getElementById('status').textContent = 'Ready to explore the pathways';
+        }
+
+        function initialCameraDistance() {
+            return Math.max(window.innerWidth <= 1100 ? 21 : 13, 11 / (window.innerWidth / window.innerHeight));
         }
 
         function animate() {
@@ -1188,7 +1367,7 @@
             if (diazepamSphere) {
                 // Only update position if not hovered
                 if (diazepamSphere !== hoveredObject) {
-                    diazepamSphere.position.y = Math.sin(time * 0.5) * 0.3;
+                    diazepamSphere.position.y = diazepamSphere.userData.basePosition.y + Math.sin(time * 0.5) * 0.12;
                 }
                 diazepamSphere.rotation.x += 0.008;
                 diazepamSphere.rotation.y += 0.012;
@@ -1215,7 +1394,7 @@
                 if (sphere) {
                     // Only update position if not hovered
                     if (sphere !== hoveredObject) {
-                        sphere.position.y += Math.sin(time * 0.7 + index * 2) * 0.003;
+                        sphere.position.y = sphere.userData.basePosition.y + Math.sin(time * 0.7 + index * 2) * 0.1;
                     }
                     sphere.rotation.x += 0.01 + index * 0.002;
                     sphere.rotation.y += 0.015 - index * 0.003;
@@ -1249,38 +1428,10 @@
                 parentRing.position.copy(diazepamSphere.position);
             }
 
-            // Animate connection flow particles
-            connectionParticles.forEach((particleGroup, groupIndex) => {
-                particleGroup.forEach((particle, particleIndex) => {
-                    if (particle.material.opacity > 0) {
-                        const flowSpeed = 0.8;
-                        const loopDuration = 4; // Time for complete loop in seconds
-                        const globalProgress = (time * flowSpeed + particleIndex * 0.4) % loopDuration / loopDuration;
-
-                        // Interpolate position along the path
-                        particle.position.lerpVectors(
-                            particle.userData.startPos,
-                            particle.userData.endPos,
-                            globalProgress
-                        );
-
-                        // Fade particles near the ends for smooth cycling
-                        const fadeZone = 0.2;
-                        let alpha = 1;
-                        if (globalProgress < fadeZone) {
-                            alpha = globalProgress / fadeZone;
-                        } else if (globalProgress > 1 - fadeZone) {
-                            alpha = (1 - globalProgress) / fadeZone;
-                        }
-
-                        particle.material.opacity = 0.8 * alpha;
-
-                        // Add subtle pulsing
-                        const pulse = Math.sin(time * 3 + particleIndex * Math.PI * 0.5) * 0.2 + 1;
-                        particle.scale.setScalar(pulse);
-                    }
-                });
-            });
+            updateMetabolism(performance.now());
+            updateConnections(time);
+            scene.updateMatrixWorld(true);
+            camera.updateMatrixWorld(true);
 
             // Update HTML labels
             updateLabels();
@@ -1291,6 +1442,7 @@
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
+            controls.fit();
             renderer.setSize(window.innerWidth, window.innerHeight);
             updateLabels();
         }
